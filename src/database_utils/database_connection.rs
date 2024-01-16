@@ -1,4 +1,3 @@
-use dotenv::dotenv;
 use sqlx::mysql::{MySqlPool, MySqlPoolOptions};
 use std::env;
 
@@ -7,9 +6,6 @@ pub struct AppDatabase {
 }
 
 pub async fn database_connect() -> Result<AppDatabase, sqlx::Error> {
-    // Load env vars from .env file
-    dotenv().ok();
-
     let mysql_user: String = env::var("MYSQL_USER").expect("MYSQL_USER env var is not set!");
     let mysql_password: String =
         env::var("MYSQL_PASSWORD").expect("MYSQL_PASSWORD env var is not set!");
