@@ -28,4 +28,5 @@ VALUES
     (1, 'Hanoi Beer', 5, 'Barack Obama', 'Annie'),
     (1, 'Bun Cha', 10, 'Anthony Bourdain', 'Annie'),
     (1, 'Tiger Beer', 5, 'Anthony Bourdain', 'Annie'),
-    (3, 'Pho', 15, 'Denis Chen', 'Roger')
+    (2, 'Pho', 15, 'Denis Chen', 'Roger'),
+    (2, 'Pho', 15, 'Denis Chen', 'Roger')
