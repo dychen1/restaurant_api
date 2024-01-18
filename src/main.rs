@@ -1,5 +1,5 @@
 use axum::{
-    routing::{get, post},
+    routing::{get, post, put},
     Router,
 };
 use dotenv::dotenv;
@@ -7,8 +7,8 @@ use std::sync::Arc;
 
 mod handlers;
 use handlers::health_check::health_checker;
+use handlers::items::{add_items, get_all_table_items, get_items};
 use handlers::tables::{add_table, get_seats};
-// use handlers::tables::get_seats;
 
 mod database_utils;
 use database_utils::database_connection::{database_connect, AppDatabase};
@@ -32,7 +32,10 @@ async fn main() {
     let app = Router::new()
         .route("/health", get(health_checker))
         .route("/table/:id", get(get_seats))
-        .route("/table", post(add_table))
+        .route("/table/add", put(add_table))
+        .route("/items/table/:id", get(get_all_table_items))
+        .route("/items", post(get_items))
+        .route("/items/add", put(add_items))
         .with_state(Arc::new(app_database));
 
     // Build server address
