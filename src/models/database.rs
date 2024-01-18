@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+// Also used as response model for table related routes
 #[derive(Debug, Deserialize, Serialize, sqlx::FromRow)]
 pub struct Table {
     pub id: u32,

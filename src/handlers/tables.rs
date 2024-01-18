@@ -14,13 +14,9 @@ pub async fn get_seats(
     State(app_database): State<Arc<AppDatabase>>,
     Path(table_id): Path<i32>,
 ) -> Response {
-    match sqlx::query_as!(
-        Table,
-        "SELECT id, seats FROM tables WHERE id = ? LIMIT 1",
-        table_id
-    )
-    .fetch_one(&app_database.connection_pool)
-    .await
+    match sqlx::query_as!(Table, "SELECT id, seats FROM tables WHERE id = ?", table_id)
+        .fetch_one(&app_database.connection_pool)
+        .await
     {
         Ok(table) => Json(GetSeatsResponse { seats: table.seats }).into_response(),
 

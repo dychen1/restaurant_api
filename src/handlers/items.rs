@@ -8,55 +8,37 @@ use rand::Rng;
 use sqlx::QueryBuilder;
 use std::sync::Arc;
 
-use crate::models::database::Items;
-use crate::models::request::{AddItemsRequest, ItemsRequest};
+use crate::models::request::{AddItemsRequest, GetItemsRequest, TableItem};
 use crate::models::response::ItemsResponse;
 use crate::models::response::{GenericErrorResponse, SuccessResponse};
 use crate::AppDatabase;
 
 pub async fn get_items(
     State(app_database): State<Arc<AppDatabase>>,
-    Json(body): Json<ItemsRequest>,
+    Json(body): Json<GetItemsRequest>,
 ) -> Response {
-    // let and_condition = match body.items {
-    //     Some(items) => (" AND items IN (?)".to_string(), items.join(", ")),
-    //     _ => ("".to_string(), "".to_string()),
-    // };
+    let mut query = QueryBuilder::new("SELECT * FROM items WHERE table_id = ");
+    query.push_bind(body.table_id);
 
-    // match QueryBuilder::new("SELECT * FROM items WHERE table_id = ")
-    //     .push_bind(body.table_id)
-    //     // .push(and_condition.0)
-    //     // .push_bind(and_condition.1)
-    //     .build_query_as()
-    //     .fetch_all(&app_database.connection_pool)
-    //     .await
-    // {
-    //     Ok(rows) => Json(ItemsResponse { items: rows }).into_response(),
+    if body.item.is_some() {
+        query.push(" AND item = ");
+        query.push_bind(body.item.unwrap());
+    } else if body.customer_id.is_some() {
+        query.push(" AND customer_id = ");
+        query.push_bind(body.customer_id.unwrap());
+    }
 
-    //     Err(err) => GenericErrorResponse {
-    //         msg: format!(
-    //             "Database error when querying for items: \"{}\"",
-    //             err.to_string()
-    //         ),
-    //         status_code: StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
-    //     }
-    //     .into_response(),
-    // }
-
-    match sqlx::query_as!(
-        Items,
-        "SELECT * FROM items WHERE table_id = ? AND item IN (?)",
-        body.table_id,
-        body.items.join(", "),
-    )
-    .fetch_all(&app_database.connection_pool)
-    .await
+    match query
+        .build_query_as()
+        .fetch_all(&app_database.connection_pool)
+        .await
     {
         Ok(rows) => Json(ItemsResponse { items: rows }).into_response(),
+
         Err(err) => GenericErrorResponse {
             msg: format!(
                 "Database error when querying for items: \"{}\"",
-                err.to_string()
+                err.to_string(),
             ),
             status_code: StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
         }
@@ -64,19 +46,66 @@ pub async fn get_items(
     }
 }
 
-pub async fn get_all_table_items(
+pub async fn delete_item_by_id(
     State(app_database): State<Arc<AppDatabase>>,
-    Path(table_id): Path<i32>,
+    Path(id): Path<u32>,
 ) -> Response {
-    match sqlx::query_as!(Items, "SELECT * FROM items WHERE table_id = ?", table_id,)
-        .fetch_all(&app_database.connection_pool)
+    match sqlx::query!("DELETE FROM items WHERE id = ?", id)
+        .execute(&app_database.connection_pool)
         .await
     {
-        Ok(rows) => Json(ItemsResponse { items: rows }).into_response(),
+        Ok(_) => Json(SuccessResponse {
+            msg: format!("Sucessfully deleted item {}", id),
+        })
+        .into_response(),
+
         Err(err) => GenericErrorResponse {
             msg: format!(
                 "Database error when querying for items: \"{}\"",
-                err.to_string()
+                err.to_string(),
+            ),
+            status_code: StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
+        }
+        .into_response(),
+    }
+}
+
+pub async fn delete_item(
+    State(app_database): State<Arc<AppDatabase>>,
+    Json(body): Json<TableItem>,
+) -> Response {
+    let mut query = QueryBuilder::new("DELETE FROM items WHERE table_id = ");
+    query
+        .push_bind(&body.table_id)
+        .push(" AND item = ")
+        .push_bind(&body.item);
+
+    if body.customer_id.is_some() {
+        query.push(" AND customer_id = ");
+        query.push_bind(body.customer_id.unwrap());
+    }
+
+    // Set to only delete first occurance of an item
+    match query
+        .push(" LIMIT 1")
+        .build()
+        .execute(&app_database.connection_pool)
+        .await
+    {
+        Ok(_) => Json(SuccessResponse {
+            msg: format!(
+                "Sucessfully deleted {} from table {}",
+                body.item, body.table_id
+            ),
+        })
+        .into_response(),
+
+        Err(err) => GenericErrorResponse {
+            msg: format!(
+                "Database error when attempting to delete item {} from table {}: \"{}\"",
+                body.item,
+                body.table_id,
+                err.to_string(),
             ),
             status_code: StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
         }

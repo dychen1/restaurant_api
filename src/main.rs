@@ -1,5 +1,5 @@
 use axum::{
-    routing::{get, post, put},
+    routing::{delete, get, post, put},
     Router,
 };
 use dotenv::dotenv;
@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 mod handlers;
 use handlers::health_check::health_checker;
-use handlers::items::{add_items, get_all_table_items, get_items};
+use handlers::items::{add_items, delete_item, delete_item_by_id, get_items};
 use handlers::tables::{add_table, get_seats};
 
 mod database_utils;
@@ -33,9 +33,10 @@ async fn main() {
         .route("/health", get(health_checker))
         .route("/table/:id", get(get_seats))
         .route("/table/add", put(add_table))
-        .route("/items/table/:id", get(get_all_table_items))
         .route("/items", post(get_items))
         .route("/items/add", put(add_items))
+        .route("/items/delete", delete(delete_item))
+        .route("/items/delete/:id", delete(delete_item_by_id))
         .with_state(Arc::new(app_database));
 
     // Build server address
@@ -44,6 +45,6 @@ async fn main() {
     let addr = format!("{}:{}", app_host, app_port);
     // Start TCP listener
     let tcp_listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
-    println!("Server hosted on {}", addr);
+    println!(" => Listening on {}", addr);
     axum::serve(tcp_listener, app).await.unwrap() // this is our server!
 }

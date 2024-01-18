@@ -26,8 +26,8 @@ pub struct GenericErrorResponse {
     pub status_code: u16,
 }
 
-// A bit of a catch all implementation for a struct to pipe back the server error along
-// with a status code to the client
+// A bit of a catch all implementation for a struct, used to pipe
+// back the server error msg along with a status code to the client
 impl IntoResponse for GenericErrorResponse {
     fn into_response(self) -> Response<Body> {
         Response::builder()

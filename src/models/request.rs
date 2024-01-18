@@ -1,14 +1,15 @@
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
-pub struct ItemsRequest {
+pub struct GetItemsRequest {
     pub table_id: u32,
-    pub items: Vec<String>,
+    pub item: Option<String>,
     pub customer_id: Option<String>,
 }
 
+// Used for adding and deleting items
 #[derive(Deserialize, Debug)]
-pub struct ItemFields {
+pub struct TableItem {
     pub table_id: u32,
     pub item: String,
     pub customer_id: Option<String>,
@@ -16,5 +17,5 @@ pub struct ItemFields {
 
 #[derive(Deserialize, Debug)]
 pub struct AddItemsRequest {
-    pub to_add: Vec<ItemFields>,
+    pub to_add: Vec<TableItem>,
 }
