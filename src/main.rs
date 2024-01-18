@@ -9,10 +9,9 @@ mod handlers;
 use handlers::health_check::health_checker;
 use handlers::items::{add_items, delete_item, delete_item_by_id, get_items};
 use handlers::tables::{add_table, get_seats};
-
 mod database_utils;
 use database_utils::database_connection::{database_connect, AppDatabase};
-
+mod errors;
 mod models;
 
 #[tokio::main]
@@ -28,7 +27,7 @@ async fn main() {
         }
     };
 
-    // Establish api routes
+    // Register api routes
     let app = Router::new()
         .route("/health", get(health_checker))
         .route("/table/:id", get(get_seats))
@@ -45,6 +44,6 @@ async fn main() {
     let addr = format!("{}:{}", app_host, app_port);
     // Start TCP listener
     let tcp_listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
-    println!(" => Listening on {}", addr);
+    println!("Listening on {}", addr);
     axum::serve(tcp_listener, app).await.unwrap() // this is our server!
 }

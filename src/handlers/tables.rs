@@ -20,15 +20,16 @@ pub async fn get_seats(
     {
         Ok(table) => Json(GetSeatsResponse { seats: table.seats }).into_response(),
 
-        Err(err) => GenericErrorResponse {
-            msg: format!(
-                "Database error when looking up seats for table {}: \"{}\"",
-                table_id,
-                err.to_string()
-            ),
-            status_code: StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
+        Err(err) => {
+            let err_resp = format!("Error attempting to get table {}", table_id);
+            eprintln!("=> {} - {}:\n{}", "get_table", &err_resp, err.to_string());
+
+            GenericErrorResponse {
+                msg: err_resp,
+                status_code: StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
+            }
+            .into_response()
         }
-        .into_response(),
     }
 }
 
@@ -57,15 +58,18 @@ pub async fn add_table(
         })
         .into_response(),
 
-        Err(err) => GenericErrorResponse {
-            msg: format!(
-                "Database error when inserting table {} with {} seats: \"{}\"",
-                table.id,
-                table.seats,
-                err.to_string()
-            ),
-            status_code: StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
+        Err(err) => {
+            let err_resp = format!(
+                "Error when inserting table {} with {} seats",
+                table.id, table.seats
+            );
+            eprintln!("=> {} - {}:\n{}", "add_table", &err_resp, err.to_string());
+
+            GenericErrorResponse {
+                msg: err_resp,
+                status_code: StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
+            }
+            .into_response()
         }
-        .into_response(),
     }
 }
