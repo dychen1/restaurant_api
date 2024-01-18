@@ -1,6 +1,7 @@
 use axum::http::StatusCode;
 use sqlx::error::Error;
 
+use crate::models::database::Table;
 use crate::models::request::{GetItemRequest, TableItem};
 use crate::models::response::GenericErrorResponse;
 
@@ -43,7 +44,31 @@ impl ItemErrors for Error {
 
     fn add_items_err(&self) -> GenericErrorResponse {
         GenericErrorResponse {
-            msg: format!("Error encountered when trying to insert items",),
+            msg: format!("Error when attempting to insert items",),
+            status_code: StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
+        }
+    }
+}
+
+pub trait TableErrors {
+    fn get_seats_err(&self, table_id: u32) -> GenericErrorResponse;
+    fn add_table_err(&self, body: Table) -> GenericErrorResponse;
+}
+
+impl TableErrors for Error {
+    fn get_seats_err(&self, table_id: u32) -> GenericErrorResponse {
+        GenericErrorResponse {
+            msg: format!("Error attempting to get table {}", table_id),
+            status_code: StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
+        }
+    }
+
+    fn add_table_err(&self, body: Table) -> GenericErrorResponse {
+        GenericErrorResponse {
+            msg: format!(
+                "Error when attempting to insert table {} with {} seats",
+                body.id, body.seats
+            ),
             status_code: StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
         }
     }

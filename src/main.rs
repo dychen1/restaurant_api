@@ -28,6 +28,7 @@ async fn main() {
     };
 
     // Register api routes
+    // TODO: add delete table by id route
     let app = Router::new()
         .route("/health", get(health_checker))
         .route("/table/:id", get(get_seats))

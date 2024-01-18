@@ -7,11 +7,10 @@ use rand::Rng;
 use sqlx::QueryBuilder;
 use std::sync::Arc;
 
-use crate::errors::errors::ItemErrors;
 use crate::models::request::{AddItemsRequest, GetItemRequest, TableItem};
-use crate::models::response::SuccessResponse;
-use crate::models::response::{DeleteResponseMessage, ItemsResponse};
+use crate::models::response::ItemsResponse;
 use crate::AppDatabase;
+use crate::{errors::errors::ItemErrors, models::response::ResponseBuilder};
 
 pub async fn get_items(
     State(app_database): State<Arc<AppDatabase>>,
@@ -53,10 +52,7 @@ pub async fn delete_item_by_id(
         .execute(&app_database.connection_pool)
         .await
     {
-        Ok(results) => Json(SuccessResponse {
-            msg: results.generate_delete_msg(id),
-        })
-        .into_response(),
+        Ok(results) => results.new_delete_item_response(id),
 
         Err(err) => {
             let err_resp = err.delete_by_id_err(id);
@@ -92,10 +88,7 @@ pub async fn delete_item(
         .execute(&app_database.connection_pool)
         .await
     {
-        Ok(results) => Json(SuccessResponse {
-            msg: results.generate_delete_msg(body.table_id),
-        })
-        .into_response(),
+        Ok(results) => results.new_delete_item_response(body.table_id),
 
         Err(err) => {
             let err_resp = err.delete_item_err(body);
@@ -115,9 +108,8 @@ pub async fn add_items(
     Json(body): Json<AddItemsRequest>,
 ) -> Response {
     // TODO: Handle bind limit by performing multiple queries
-    // Mysql bind limit over number of fields we're binding
-    const MYSQL_BIND_LIMIT: usize = 65535 / 4; // .take() expects an usize
-    let n = body.to_add.len();
+    // Mysql bind limit for number of fields that we can bind
+    const MYSQL_BIND_LIMIT: usize = 65535 / 4;
 
     // Using QueryBuilder because sqlx does not support bulk insert by vector
     match QueryBuilder::new("INSERT INTO items (table_id, item, cook_time, customer_id) ")
@@ -135,10 +127,7 @@ pub async fn add_items(
         .execute(&app_database.connection_pool)
         .await
     {
-        Ok(_) => Json(SuccessResponse {
-            msg: format!("Sucessfully added {} new items", n),
-        })
-        .into_response(),
+        Ok(result) => result.new_add_item_reseponse(),
 
         Err(err) => {
             let err_resp = err.add_items_err();

@@ -1,18 +1,20 @@
 use axum::{
     extract::{Path, State},
-    http::StatusCode,
     response::{IntoResponse, Response},
     Json,
 };
 use std::sync::Arc;
 
-use crate::models::response::GetSeatsResponse;
-use crate::models::{database::Table, response::GenericErrorResponse, response::SuccessResponse};
+use crate::models::database::Table;
 use crate::AppDatabase;
+use crate::{
+    errors::errors::TableErrors,
+    models::response::{GetSeatsResponse, ResponseBuilder},
+};
 
 pub async fn get_seats(
     State(app_database): State<Arc<AppDatabase>>,
-    Path(table_id): Path<i32>,
+    Path(table_id): Path<u32>,
 ) -> Response {
     match sqlx::query_as!(Table, "SELECT id, seats FROM tables WHERE id = ?", table_id)
         .fetch_one(&app_database.connection_pool)
@@ -21,14 +23,14 @@ pub async fn get_seats(
         Ok(table) => Json(GetSeatsResponse { seats: table.seats }).into_response(),
 
         Err(err) => {
-            let err_resp = format!("Error attempting to get table {}", table_id);
-            eprintln!("=> {} - {}:\n{}", "get_table", &err_resp, err.to_string());
-
-            GenericErrorResponse {
-                msg: err_resp,
-                status_code: StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
-            }
-            .into_response()
+            let err_resp = err.get_seats_err(table_id);
+            eprintln!(
+                "=> {} - {}:\n{}",
+                "get_table",
+                &err_resp.msg,
+                err.to_string()
+            );
+            err_resp.into_response()
         }
     }
 }
@@ -37,39 +39,23 @@ pub async fn add_table(
     State(app_database): State<Arc<AppDatabase>>,
     Json(body): Json<Table>,
 ) -> Response {
-    let table = Table {
-        id: body.id,
-        seats: body.seats,
-    };
-    match sqlx::query_as!(
-        Table,
-        "INSERT INTO tables (id, seats) VALUES (?, ?)",
-        table.id,
-        table.seats
-    )
-    .execute(&app_database.connection_pool)
-    .await
+    match sqlx::query("INSERT INTO tables (id, seats) VALUES (?, ?)")
+        .bind(body.id)
+        .bind(body.seats)
+        .execute(&app_database.connection_pool)
+        .await
     {
-        Ok(_) => Json(SuccessResponse {
-            msg: format!(
-                "Sucessfully created new table {} with {} seats",
-                table.id, table.seats
-            ),
-        })
-        .into_response(),
+        Ok(result) => result.new_add_table_response(body.id, body.seats),
 
         Err(err) => {
-            let err_resp = format!(
-                "Error when inserting table {} with {} seats",
-                table.id, table.seats
+            let err_resp = err.add_table_err(body);
+            eprintln!(
+                "=> {} - {}:\n{}",
+                "add_table",
+                &err_resp.msg,
+                err.to_string()
             );
-            eprintln!("=> {} - {}:\n{}", "add_table", &err_resp, err.to_string());
-
-            GenericErrorResponse {
-                msg: err_resp,
-                status_code: StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
-            }
-            .into_response()
+            err_resp.into_response()
         }
     }
 }
