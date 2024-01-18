@@ -3,10 +3,7 @@ use axum::http::Response;
 use axum::response::IntoResponse;
 use serde::Serialize;
 
-pub struct GenericErrorResponse {
-    pub msg: String,
-    pub status_code: u16,
-}
+use super::database::Items;
 
 #[derive(Serialize)]
 pub struct SuccessResponse {
@@ -19,6 +16,18 @@ pub struct GetSeatsResponse {
     pub seats: u32,
 }
 
+#[derive(Serialize)]
+pub struct ItemsResponse {
+    pub items: Vec<Items>,
+}
+
+pub struct GenericErrorResponse {
+    pub msg: String,
+    pub status_code: u16,
+}
+
+// A bit of a catch all implementation for a struct to pipe back the server error along
+// with a status code to the client
 impl IntoResponse for GenericErrorResponse {
     fn into_response(self) -> Response<Body> {
         Response::builder()
