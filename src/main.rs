@@ -6,13 +6,12 @@ use dotenv::dotenv;
 use std::sync::Arc;
 
 mod handlers;
+mod models;
+mod utils;
 use handlers::health_check::health_checker;
 use handlers::items::{add_items, delete_item, delete_item_by_id, get_items};
 use handlers::tables::{add_table, get_seats};
-mod database_utils;
-use database_utils::database_connection::{database_connect, AppDatabase};
-mod errors;
-mod models;
+use utils::database_connection::{database_connect, AppDatabase};
 
 #[tokio::main]
 async fn main() {

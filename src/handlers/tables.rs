@@ -6,11 +6,9 @@ use axum::{
 use std::sync::Arc;
 
 use crate::models::database::Table;
+use crate::models::response::GetSeatsResponse;
+use crate::utils::response_builder::{SuccessResponseBuilder, TableErrorResponseBuilder};
 use crate::AppDatabase;
-use crate::{
-    errors::errors::TableErrors,
-    models::response::{GetSeatsResponse, ResponseBuilder},
-};
 
 pub async fn get_seats(
     State(app_database): State<Arc<AppDatabase>>,
@@ -45,7 +43,7 @@ pub async fn add_table(
         .execute(&app_database.connection_pool)
         .await
     {
-        Ok(result) => result.new_add_table_response(body.id, body.seats),
+        Ok(result) => result.add_table_response(body.id, body.seats),
 
         Err(err) => {
             let err_resp = err.add_table_err(body);

@@ -9,8 +9,8 @@ use std::sync::Arc;
 
 use crate::models::request::{AddItemsRequest, GetItemRequest, TableItem};
 use crate::models::response::ItemsResponse;
+use crate::utils::response_builder::{ItemErrorResponseBuilder, SuccessResponseBuilder};
 use crate::AppDatabase;
-use crate::{errors::errors::ItemErrors, models::response::ResponseBuilder};
 
 pub async fn get_items(
     State(app_database): State<Arc<AppDatabase>>,
@@ -52,7 +52,7 @@ pub async fn delete_item_by_id(
         .execute(&app_database.connection_pool)
         .await
     {
-        Ok(results) => results.new_delete_item_response(id),
+        Ok(results) => results.delete_item_response(),
 
         Err(err) => {
             let err_resp = err.delete_by_id_err(id);
@@ -88,7 +88,7 @@ pub async fn delete_item(
         .execute(&app_database.connection_pool)
         .await
     {
-        Ok(results) => results.new_delete_item_response(body.table_id),
+        Ok(results) => results.delete_item_response(),
 
         Err(err) => {
             let err_resp = err.delete_item_err(body);
@@ -127,7 +127,7 @@ pub async fn add_items(
         .execute(&app_database.connection_pool)
         .await
     {
-        Ok(result) => result.new_add_item_reseponse(),
+        Ok(result) => result.add_item_response(),
 
         Err(err) => {
             let err_resp = err.add_items_err();

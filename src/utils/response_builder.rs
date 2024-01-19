@@ -1,18 +1,60 @@
-use axum::http::StatusCode;
+use axum::body::Body;
+use axum::http::{Response, StatusCode};
+use axum::response::IntoResponse;
+use axum::Json;
 use sqlx::error::Error;
+use sqlx::mysql::MySqlQueryResult;
 
 use crate::models::database::Table;
 use crate::models::request::{GetItemRequest, TableItem};
-use crate::models::response::GenericErrorResponse;
+use crate::models::response::{GenericErrorResponse, GenericSuccessResponse, SuccessRowsReponse};
 
-pub trait ItemErrors {
+// Success Responses
+pub trait SuccessResponseBuilder {
+    fn add_table_response(self, table_id: u32, seats: u32) -> Response<Body>;
+    fn delete_item_response(self) -> Response<Body>;
+    fn add_item_response(self) -> Response<Body>;
+}
+
+impl SuccessResponseBuilder for MySqlQueryResult {
+    fn delete_item_response(self) -> Response<Body> {
+        // Establishing deleting a row that do not exist is not a 4xx reponse.
+        // This assumes the client is not blindly sending delete requests.
+        Json(SuccessRowsReponse {
+            msg: format!("Sucessfully deleted {} item(s)", self.rows_affected()),
+            rows: self.rows_affected(),
+        })
+        .into_response()
+    }
+
+    fn add_item_response(self) -> Response<Body> {
+        Json(SuccessRowsReponse {
+            msg: format!("Sucessfully deleted {} item(s)", self.rows_affected()),
+            rows: self.rows_affected(),
+        })
+        .into_response()
+    }
+
+    fn add_table_response(self, table_id: u32, seats: u32) -> Response<Body> {
+        Json(GenericSuccessResponse {
+            msg: format!(
+                "Sucessfully created new table {} with {} seats",
+                table_id, seats
+            ),
+        })
+        .into_response()
+    }
+}
+
+// Error responses
+pub trait ItemErrorResponseBuilder {
     fn get_items_err(&self, body: GetItemRequest) -> GenericErrorResponse;
     fn delete_by_id_err(&self, item_id: u32) -> GenericErrorResponse;
     fn delete_item_err(&self, body: TableItem) -> GenericErrorResponse;
     fn add_items_err(&self) -> GenericErrorResponse;
 }
 
-impl ItemErrors for Error {
+impl ItemErrorResponseBuilder for Error {
     fn get_items_err(&self, body: GetItemRequest) -> GenericErrorResponse {
         GenericErrorResponse {
             msg: format!(
@@ -50,12 +92,12 @@ impl ItemErrors for Error {
     }
 }
 
-pub trait TableErrors {
+pub trait TableErrorResponseBuilder {
     fn get_seats_err(&self, table_id: u32) -> GenericErrorResponse;
     fn add_table_err(&self, body: Table) -> GenericErrorResponse;
 }
 
-impl TableErrors for Error {
+impl TableErrorResponseBuilder for Error {
     fn get_seats_err(&self, table_id: u32) -> GenericErrorResponse {
         GenericErrorResponse {
             msg: format!("Error attempting to get table {}", table_id),
