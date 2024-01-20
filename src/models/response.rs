@@ -1,19 +1,15 @@
+use super::database::Items;
 use axum::body::Body;
 use axum::http::Response;
 use axum::response::IntoResponse;
 use serde::{Deserialize, Serialize};
-
-use super::database::Items;
+use serde_json;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct GenericSuccessResponse {
-    //Status code 200 is returned implicitly with into_response()
-    pub msg: String,
-}
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct GenericErrorResponse {
+pub struct GenericResponse {
     pub msg: String,
     pub status_code: u16,
+    pub rows: Option<u64>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -26,19 +22,14 @@ pub struct ItemsResponse {
     pub items: Vec<Items>,
 }
 
-// A bit of a catch all implementation for a struct, used to pipe
-// back the server error msg along with a status code to the client
-impl IntoResponse for GenericErrorResponse {
+// Used for everything that is not get_sets or get_items
+impl IntoResponse for GenericResponse {
     fn into_response(self) -> Response<Body> {
         Response::builder()
             .status(self.status_code)
-            .body(Body::from(self.msg))
+            .body(Body::from(
+                serde_json::to_string(&self).unwrap_or_else(|_| "".to_string()),
+            ))
             .unwrap()
     }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct SuccessRowsReponse {
-    pub msg: String,
-    pub rows: u64,
 }

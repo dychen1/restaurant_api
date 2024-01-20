@@ -7,8 +7,10 @@ use rand::Rng;
 use sqlx::QueryBuilder;
 use std::sync::Arc;
 
-use crate::models::request::{AddItemsRequest, GetItemRequest, TableItem};
-use crate::models::response::ItemsResponse;
+use crate::models::{
+    request::{AddItemsRequest, GetItemRequest, TableItem},
+    response::ItemsResponse,
+};
 use crate::utils::response_builder::{ItemErrorResponseBuilder, ItemSuccessResponseBuilder};
 use crate::AppDatabase;
 
