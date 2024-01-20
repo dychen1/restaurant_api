@@ -1,26 +1,27 @@
 use axum::body::Body;
 use axum::http::Response;
 use axum::response::IntoResponse;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use super::database::Items;
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GenericSuccessResponse {
     //Status code 200 is returned implicitly with into_response()
     pub msg: String,
 }
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GenericErrorResponse {
     pub msg: String,
     pub status_code: u16,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct GetSeatsResponse {
     pub seats: u32,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct ItemsResponse {
     pub items: Vec<Items>,
 }
@@ -36,7 +37,7 @@ impl IntoResponse for GenericErrorResponse {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct SuccessRowsReponse {
     pub msg: String,
     pub rows: u64,

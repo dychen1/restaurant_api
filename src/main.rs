@@ -10,7 +10,7 @@ mod models;
 mod utils;
 use handlers::health_check::health_checker;
 use handlers::items::{add_items, delete_item, delete_item_by_id, get_items};
-use handlers::tables::{add_table, get_seats};
+use handlers::tables::{add_table, delete_table_by_id, get_seats};
 use utils::database_connection::{database_connect, AppDatabase};
 
 #[tokio::main]
@@ -27,11 +27,12 @@ async fn main() {
     };
 
     // Register api routes
-    // TODO: add delete table by id route
+    // TODO: implement cascading deletion of items when a table is deleted
     let app = Router::new()
         .route("/health", get(health_checker))
         .route("/table/:id", get(get_seats))
         .route("/table/add", put(add_table))
+        .route("/table/delete/:id", delete(delete_table_by_id))
         .route("/items", post(get_items))
         .route("/items/add", put(add_items))
         .route("/items/delete", delete(delete_item))

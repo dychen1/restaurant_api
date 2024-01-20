@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use crate::models::database::Table;
 use crate::models::response::GetSeatsResponse;
-use crate::utils::response_builder::{SuccessResponseBuilder, TableErrorResponseBuilder};
+use crate::utils::response_builder::{TableErrorResponseBuilder, TableSuccessResponseBuilder};
 use crate::AppDatabase;
 
 pub async fn get_seats(
@@ -50,6 +50,29 @@ pub async fn add_table(
             eprintln!(
                 "=> {} - {}:\n{}",
                 "add_table",
+                &err_resp.msg,
+                err.to_string()
+            );
+            err_resp.into_response()
+        }
+    }
+}
+
+pub async fn delete_table_by_id(
+    State(app_database): State<Arc<AppDatabase>>,
+    Path(id): Path<u32>,
+) -> Response {
+    match sqlx::query!("DELETE FROM tables WHERE id = ?", id)
+        .execute(&app_database.connection_pool)
+        .await
+    {
+        Ok(results) => results.delete_table_by_id_response(id),
+
+        Err(err) => {
+            let err_resp = err.delete_table_err(id);
+            eprintln!(
+                "=> {} - {}:\n{}",
+                "delete_table_by_id",
                 &err_resp.msg,
                 err.to_string()
             );
