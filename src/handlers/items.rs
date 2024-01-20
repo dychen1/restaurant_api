@@ -20,11 +20,12 @@ pub async fn get_items(
     query.push_bind(body.table_id);
 
     let item = body.item.clone();
-    let customer_id = body.customer_id.clone();
     if item.is_some() {
         query.push(" AND item = ");
         query.push_bind(item.unwrap());
-    } else if customer_id.is_some() {
+    }
+    let customer_id = body.customer_id.clone();
+    if customer_id.is_some() {
         query.push(" AND customer_id = ");
         query.push_bind(customer_id.unwrap());
     };
