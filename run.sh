@@ -10,4 +10,7 @@ echo "Starting up docker container!"
 
 # Force run init.sql each run
 docker rm "$DATABASE_CONTAINER" 2>/dev/null
-docker-compose up --build --force-recreate --always-recreate-deps
+docker-compose up --build --force-recreate --always-recreate-deps -d
+
+cargo run --release
+
