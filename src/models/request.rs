@@ -8,14 +8,14 @@ pub struct GetItemRequest {
 }
 
 // Used for adding and deleting items
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, Serialize)]
 pub struct TableItem {
     pub table_id: u32,
     pub item: String,
     pub customer_id: Option<String>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Serialize)]
 pub struct AddItemsRequest {
     pub to_add: Vec<TableItem>,
 }
