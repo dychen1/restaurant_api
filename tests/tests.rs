@@ -35,8 +35,8 @@ fn test_health() {
 }
 
 #[rstest]
-#[case(1, 200, 4)]
-#[case(999, 500, 0)]
+#[case(1, 200, 4)] // Get table that exists, has 4 seats
+#[case(999, 500, 0)] // Get table that doesn't exist
 fn test_get_seats(
     #[case] table_id: u32,
     #[case] expected_status: u16,
@@ -72,8 +72,8 @@ fn test_get_seats(
 }
 
 #[rstest]
-#[case(999, 10000, 200)]
-#[case(999, 10000, 500)]
+#[case(999, 1, 200)] // Add table that doesnt exist
+#[case(999, 1, 500)] // Add table that already exists
 fn test_add_table(#[case] table_id: u32, #[case] seats: u32, #[case] expected_status: u16) {
     match add_table(table_id, seats) {
         Ok(response) => {
@@ -110,8 +110,8 @@ fn test_add_table(#[case] table_id: u32, #[case] seats: u32, #[case] expected_st
 }
 
 #[rstest]
-#[case(999, 1, 200)]
-#[case(999, 0, 200)]
+#[case(999, 1, 200)] // Delete table that exists
+#[case(999, 0, 200)] // Delete table that doesn't exist
 fn test_delete_table_by_id(
     #[case] table_id: u32,
     #[case] rows_affected: u64,
@@ -145,10 +145,10 @@ fn test_delete_table_by_id(
 }
 
 #[rstest]
-#[case(GetItemRequest{table_id: 1, item: None, customer_id: None}, 4, 200)]
-#[case(GetItemRequest{table_id: 1, item: Some("Bun Cha".to_string()), customer_id: None}, 2, 200)]
-#[case(GetItemRequest{table_id: 1, item: Some("Bun Cha".to_string()), customer_id: Some("Anthony Bourdain".to_string())}, 1, 200)]
-#[case(GetItemRequest{table_id: 999, item: None, customer_id: None}, 0, 200)]
+#[case(GetItemRequest{table_id: 1, item: None, customer_id: None}, 4, 200)] // Get all items for table 1
+#[case(GetItemRequest{table_id: 1, item: Some("Bun Cha".to_string()), customer_id: None}, 2, 200)] // Get specific item for table 1
+#[case(GetItemRequest{table_id: 1, item: Some("Bun Cha".to_string()), customer_id: Some("Anthony Bourdain".to_string())}, 1, 200)] // Get specific item for table 1 and customer
+#[case(GetItemRequest{table_id: 999, item: None, customer_id: None}, 0, 200)] // Get items for table that doesn't exist
 fn test_get_items(
     #[case] request: GetItemRequest,
     #[case] expected_rows: usize,
@@ -174,13 +174,13 @@ fn test_get_items(
 }
 
 #[rstest]
-#[case(AddItemsRequest{to_add: vec![ TableItem{table_id: 1000, item: "Burger".to_string(), customer_id: Some("Bob".to_string())}] } , 1, 200)]
+#[case(AddItemsRequest{to_add: vec![ TableItem{table_id: 999, item: "Burger".to_string(), customer_id: Some("Bob".to_string())}] } , 1, 200)]
 fn test_add_item(
     #[case] request: AddItemsRequest,
     #[case] expected_rows: u64,
     #[case] expected_status: u16,
 ) {
-    let _ = add_table(1000, 1); // Add table for item
+    let _ = add_table(999, 1); // Add table for item
 
     match add_item(request) {
         Ok(response) => {
@@ -193,25 +193,27 @@ fn test_add_item(
                 "\n=> Route: /items/add\n=> Added {} rows: {:?}\n",
                 expected_rows, json_resp
             );
-            // let _
         }
         Err(err) => {
             eprintln!("\n=> Route: /items/add\n=> Unintended error: {}\n", err);
             panic!("Failed to get add items response");
         }
     }
-    let _ = delete_table_by_id(1000); // Cleanup
+    let _ = delete_table_by_id(999); // Cleanup table and item associated with table
 }
 
 #[rstest]
-#[case(999, 1, 200)]
-#[case(999, 0, 200)]
+#[case(999, 1, 200)] // Delete item that exists
+#[case(999, 0, 200)] // Delete item that doesn't exist
 fn test_delete_item_by_id(
     #[case] table_id: u32,
     #[case] rows_affected: u64,
     #[case] expected_status: u16,
 ) {
     let item_id = if rows_affected == 1 {
+        // Add table for item
+        let _ = add_table(table_id, 1);
+
         // Add an item for deletion
         let _ = add_item(AddItemsRequest {
             to_add: vec![TableItem {
@@ -222,18 +224,16 @@ fn test_delete_item_by_id(
         });
 
         // Fetch the id of the item that was just added
-        let x = get_items(GetItemRequest {
+        get_items(GetItemRequest {
             table_id: table_id,
             item: Some("Burger".to_string()),
             customer_id: Some("Bob".to_string()),
         })
         .unwrap()
         .json::<ItemsResponse>()
-        .unwrap();
-        println!("@@@{:?}", x);
-        11
-        // .items[0]
-        //     .id
+        .unwrap()
+        .items[0]
+            .id
     } else {
         999
     };
@@ -259,6 +259,58 @@ fn test_delete_item_by_id(
             panic!("Failed to get delete item response");
         }
     }
+}
+
+#[rstest]
+#[case(TableItem {
+    table_id: 999,
+    item: "Burger".to_string(),
+    customer_id: Some("Bob".to_string()),
+}, 1, 200)] // Delete item that exists
+#[case(TableItem {
+    table_id: 999,
+    item: "Burger".to_string(),
+    customer_id: Some("Bob".to_string()),
+}, 0, 200)] // Delete item that doesn't exist
+fn test_delete_item(
+    #[case] item: TableItem,
+    #[case] expected_rows: u64,
+    #[case] expected_status: u16,
+) {
+    if expected_rows > 0 {
+        // Add table for item
+        let _ = add_table(item.table_id, 1);
+
+        // Add an item for deletion
+        let _ = add_item(AddItemsRequest {
+            to_add: vec![TableItem {
+                table_id: item.table_id,
+                item: "Burger".to_string(),
+                customer_id: Some("Bob".to_string()),
+            }],
+        });
+    };
+    let table_id = item.table_id; // Needed for cleanup
+
+    match delete_item(item) {
+        Ok(response) => {
+            assert!(response.status().as_u16() == expected_status);
+
+            let json_resp = response.json::<GenericResponse>().unwrap();
+            assert_eq!(json_resp.rows, Some(expected_rows));
+
+            println!(
+                "\n=> Route: /items/delete\n=> Response for delete item: {:?}\n",
+                json_resp
+            );
+        }
+
+        Err(err) => {
+            eprintln!("\n=> Route: /items/delete\n=> Unintended error: {}\n", err);
+            panic!("Failed to get delete item response");
+        }
+    }
+    let _ = delete_table_by_id(table_id); // Cleanup table
 }
 
 // Helpers
@@ -313,4 +365,11 @@ fn delete_item_by_id(item_id: u32) -> TestResponse {
     let route = "/items/delete/".to_string() + &item_id.to_string();
 
     client.delete(host + &route).send()
+}
+
+fn delete_item(item: TableItem) -> TestResponse {
+    let (client, host) = get_test_server();
+    let route = "/items/delete".to_string();
+
+    client.delete(host + &route).json(&item).send()
 }

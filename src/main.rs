@@ -27,7 +27,6 @@ async fn main() {
     };
 
     // Register api routes
-    // TODO: implement cascading deletion of items when a table is deleted
     let app = Router::new()
         .route("/health", get(health_checker))
         .route("/table/:id", get(get_seats))
