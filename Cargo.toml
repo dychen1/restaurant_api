@@ -13,8 +13,9 @@ sqlx = { version = "0.7.3", features = ["mysql", "chrono", "runtime-tokio"] }
 axum = "0.7.4"
 dotenv = "0.15.0"
 serde_json = "1.0.111"
+reqwest = "0.11.23"
+blocking = "1.5.1"
 
 [dev-dependencies]
-anyhow = "1.0.79"
-reqwest = { version = "0.11.23", features = ["json"] }
+reqwest = { version = "0.11.23", features = ["json", "blocking"] }
 rstest = "0.18.2"

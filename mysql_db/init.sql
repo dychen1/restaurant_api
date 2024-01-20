@@ -12,7 +12,9 @@ CREATE TABLE items (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     INDEX idx_item (item),
     INDEX idx_customer_id (customer_id),
-    FOREIGN KEY (table_id) REFERENCES tables (id)
+    FOREIGN KEY (table_id) REFERENCES tables (id) 
+        ON DELETE CASCADE 
+        ON UPDATE CASCADE
 );
 -- NOTE: sqlx will not know index and fk columns are NOT NULLABLE without explicitly setting it 
 
