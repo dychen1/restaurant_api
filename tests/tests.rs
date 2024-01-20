@@ -1,28 +1,18 @@
-#![allow(unused)]
-use anyhow::Result;
-use chrono::expect;
-use dotenv::dotenv;
-use reqwest::{Client, Response};
 use rstest::rstest;
-use serde_json::json;
 
 #[path = "../src/models/response.rs"]
 mod response;
-use response::{GenericErrorResponse, GenericSuccessResponse, GetSeatsResponse};
+use response::{GenericResponse, GetSeatsResponse, ItemsResponse};
+
+#[path = "../src/models/request.rs"]
+mod request;
+use request::GetItemRequest;
 
 #[path = "../src/models/database.rs"]
 mod database;
-use database::Items;
 
-async fn get_test_server() -> (Client, String) {
-    // Need env vars for testing as well
-    dotenv().ok();
-    let app_host = std::env::var("APP_HOST").expect("APP_HOST env var not set!");
-    let app_port = std::env::var("APP_PORT").expect("APP_PORT env var not set!");
-    let addr = format!("http://{}:{}", app_host, app_port);
-    println!("\n=> Host: {}\n", addr,);
-    (Client::new(), addr)
-}
+mod utils;
+use crate::utils::{add_table, delete_table_by_id, get_test_server};
 
 #[tokio::test]
 async fn test_health() {
@@ -89,26 +79,12 @@ async fn test_get_seats(
 #[case(10000, 10000, 500)]
 #[tokio::test]
 async fn test_add_table(#[case] table_id: u32, #[case] seats: u32, #[case] expected_status: u16) {
-    let (client, host) = get_test_server().await;
-    let route = "/table/add".to_string();
-
-    match client
-        .put(host + &route)
-        .json(&database::Table {
-            id: table_id,
-            seats: seats,
-        })
-        .send()
-        .await
-    {
+    match add_table(table_id, seats).await {
         Ok(response) => {
             assert!(response.status().as_u16() == expected_status);
 
             if expected_status == 200 {
-                let json_resp = response
-                    .json::<response::GenericSuccessResponse>()
-                    .await
-                    .unwrap();
+                let json_resp = response.json::<response::GenericResponse>().await.unwrap();
                 assert_eq!(
                     json_resp.msg,
                     format!(
@@ -118,50 +94,44 @@ async fn test_add_table(#[case] table_id: u32, #[case] seats: u32, #[case] expec
                 );
 
                 println!(
-                    "\n=> Route: {}\n=> Response for table {}: {:?}\n",
-                    route, table_id, json_resp
+                    "\n=> Route: /table/add\n=> Response for table {}: {:?}\n",
+                    table_id, json_resp
                 );
             } else {
                 println!(
-                    "\n=> Route: {}\n=> Intended error response: {}\n",
-                    route,
+                    "\n=> Route: /table/add\n=> Intended error response: {}\n",
                     response.text().await.unwrap()
                 );
-                delete_table_by_id(table_id).await; // Cleanup
+                let _ = delete_table_by_id(table_id).await; // Cleanup
             }
         }
 
         Err(err) => {
-            eprintln!("\n=> Route: {}\n=> Unintended error: {}\n", route, err);
+            eprintln!("\n=> Route: /table/add\n=> Unintended error: {}\n", err);
             panic!("Failed to get add table response");
         }
     };
 }
 
-async fn delete_table_by_id(table_id: u32) -> Result<reqwest::Response, reqwest::Error> {
-    let (client, host) = get_test_server().await;
-    let route = "/table/delete/".to_string() + &table_id.to_string();
-
-    client.delete(host + &route).send().await
-}
-
 #[rstest]
-#[case(10000, 200)]
+#[case(10000, 1, 200)]
+#[case(10000, 0, 200)]
 #[tokio::test]
-async fn test_delete_table_by_id(#[case] table_id: u32, #[case] expected_status: u16) {
+async fn test_delete_table_by_id(
+    #[case] table_id: u32,
+    #[case] rows_affected: u64,
+    #[case] expected_status: u16,
+) {
+    if rows_affected == 1 {
+        let _ = add_table(table_id, 1).await; // Add table for deletion
+    }
     match delete_table_by_id(table_id).await {
         Ok(response) => {
             assert!(response.status().as_u16() == expected_status);
 
-            let json_resp = response
-                .json::<response::GenericSuccessResponse>()
-                .await
-                .unwrap();
+            let json_resp = response.json::<GenericResponse>().await.unwrap();
 
-            assert_eq!(
-                json_resp.msg,
-                format!("Sucessfully deleted table {}", table_id)
-            );
+            assert_eq!(json_resp.rows, Some(rows_affected));
 
             println!(
                 "\n=> Route: /delete/{}\n=> Response for table {}: {:?}\n",
@@ -175,6 +145,52 @@ async fn test_delete_table_by_id(#[case] table_id: u32, #[case] expected_status:
                 table_id, err
             );
             panic!("Failed to get delete table response");
+        }
+    }
+}
+
+#[rstest]
+#[case(GetItemRequest{table_id: 1, item: None, customer_id: None}, 4, 200)]
+#[case(GetItemRequest{table_id: 1, item: Some("Bun Cha".to_string()), customer_id: None}, 2, 200)]
+#[case(GetItemRequest{table_id: 1, item: Some("Bun Cha".to_string()), customer_id: Some("Anthony Bourdain".to_string())}, 1, 200)]
+#[case(GetItemRequest{table_id: 999, item: None, customer_id: None}, 0, 200)]
+#[tokio::test]
+async fn test_get_items(
+    #[case] get_item_request: GetItemRequest,
+    #[case] expected_rows: usize,
+    #[case] expected_status: u16,
+) {
+    let (client, host) = get_test_server().await;
+    let route = "/items".to_string();
+
+    match client
+        .post(host + &route)
+        .json(&get_item_request)
+        .send()
+        .await
+    {
+        Ok(response) => {
+            assert!(response.status().as_u16() == expected_status);
+
+            if expected_status == 200 {
+                let json_resp = response.json::<response::ItemsResponse>().await.unwrap();
+                assert_eq!(json_resp.items.len(), expected_rows);
+
+                println!(
+                    "\n=> Route: {}\n=> Response for table {}: {:?}\n",
+                    route, get_item_request.table_id, json_resp
+                );
+            } else {
+                println!(
+                    "\n=> Route: {}\n=> Intended error response: {}\n",
+                    route,
+                    response.text().await.unwrap()
+                );
+            }
+        }
+        Err(err) => {
+            eprintln!("\n=> Route: {}\n=> Unintended error: {}\n", route, err);
+            panic!("Failed to get add items response");
         }
     }
 }
