@@ -30,6 +30,7 @@ pub async fn get_items(
     };
 
     match query
+        .push(" ORDER BY created_at DESC")
         .build_query_as()
         .fetch_all(&app_database.connection_pool)
         .await
@@ -66,6 +67,7 @@ pub async fn delete_item_by_id(
         }
     }
 }
+
 pub async fn delete_item(
     State(app_database): State<Arc<AppDatabase>>,
     Json(body): Json<TableItem>,
@@ -83,7 +85,8 @@ pub async fn delete_item(
     }
 
     match query
-        .push(" LIMIT 1") // Only delete first occurance of an item in the case of dups
+        .push(" ORDER BY created_at DESC")
+        .push(" LIMIT 1") // Only delete latest item
         .build()
         .execute(&app_database.connection_pool)
         .await
