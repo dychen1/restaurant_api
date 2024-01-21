@@ -2,7 +2,7 @@
 
 ## Description
 
-This project is a simple REST API written in Rust using Axum and SQLx. The idea is that food items are associated with restaurant tables (and can optionally be tagged with a customer id). The API allows for create, read and delete operations the restaurant operates (update was not a part of the spec).
+This project is a simple REST API written in Rust using Axum and SQLx. The idea is that we have a restaurant with a number of tables. Each table has food items and can optionally be tagged with a customer id. The API allows for create, read and delete operations the restaurant operates (update was not a part of the spec).
 
 For the sake of simplicity, we do not introduce the concept of orders and do not need to keep track of the status of the items.
 
@@ -21,7 +21,7 @@ The following routes/endpoints are available:
   - Delete a table by its table id. Cascades to delete all items associated with the table.
 
 - `/items/` - Method: POST
-  - Fetch a list of items for a table. Optionally, provide item and/or customer_id.
+  - Fetch a list of items for a table. Optionally, provide item and/or customer_id. Provides all items if only table id is provided.
 
 - `/items/add` - Method: PUT
   - Add a list of items to a table. The app generates a static cook time between 5-15 minutes for each item.
