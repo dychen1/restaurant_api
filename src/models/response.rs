@@ -23,6 +23,8 @@ pub struct ItemsResponse {
 }
 
 // Used for everything that is not get_sets or get_items
+// In hinde sight, not super necessary since axum::Json has .into_response() implemented
+// Still useful for more descriptive error responses
 impl IntoResponse for GenericResponse {
     fn into_response(self) -> Response<Body> {
         Response::builder()

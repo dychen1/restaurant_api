@@ -66,6 +66,8 @@ impl ItemSuccessResponseBuilder for MySqlQueryResult {
 }
 
 // Error responses
+
+// We dont want to expose the sqlx::Error to the client, so we just log it and return a generic error message
 pub trait TableErrorResponseBuilder {
     fn get_seats_err(&self, table_id: u32) -> GenericResponse;
     fn add_table_err(&self, body: Table) -> GenericResponse;
