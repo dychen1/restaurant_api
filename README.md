@@ -62,6 +62,8 @@ There is a suite of integration tests that can be run using the following comman
 
 **The `--test-threads=1` is important to ensure that the tests run in a single thread.** This is necessary because the tests are not isolated from each other and perform real database operations on the provided sample db, therefore they may interfere with each other if run asynchronously.
 
+Note: The tests also have a dependency on some of the data initially inserted by `init.sql`, therefore for the integrity of the test, it would be preferred to not delete the initial data (specifically data for table `1`).
+
 The idea of this suite of tests is to simulate all _standard_ "server" (app) operations that can be received from the "client" (user). There are 12 test cases in total, and they cover all the routes of the API.
 
 `rstest` was used to parametrize test functions to cover more scenarios with fewer test functions.
